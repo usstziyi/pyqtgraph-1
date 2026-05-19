@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>老式荧光绿色值对比</title>
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0b0f0b;
+      color: #e8ffe8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 720px;
+      padding: 32px;
+      background: #111811;
+      border: 1px solid #263326;
+      border-radius: 16px;
+      box-shadow: 0 0 30px rgba(0, 255, 65, 0.18);
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: 26px;
+      color: #00ff41;
+      text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+    }
+
+    .color-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 14px;
+      background: #182018;
+      border: 1px solid #2e3a2e;
+      border-radius: 12px;
+    }
+
+    .swatch {
+      width: 140px;
+      height: 52px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      flex-shrink: 0;
+    }
+
+    .info {
+      line-height: 1.5;
+    }
+
+    .hex {
+      font-family: Menlo, Consolas, monospace;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .desc {
+      font-size: 14px;
+      color: #b8c8b8;
+    }
+
+    .c1 {
+      background: #33ff33;
+      box-shadow: 0 0 18px #33ff33;
+    }
+
+    .c2 {
+      background: #39ff14;
+      box-shadow: 0 0 18px #39ff14;
+    }
+
+    .c3 {
+      background: #00ff41;
+      box-shadow: 0 0 18px #00ff41;
+    }
+
+    .c4 {
+      background: #66ff66;
+      box-shadow: 0 0 18px #66ff66;
+    }
+
+    .c5 {
+      background: #7cfc00;
+      box-shadow: 0 0 18px #7cfc00;
+    }
+    
+    .c6 {
+        background:#34C759;
+        box-shadow:0 0 18px #34C759;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>老式荧光绿色值对比</h1>
+
+    <div class="color-list">
+      <div class="color-row">
+        <div class="swatch c1"></div>
+        <div class="info">
+          <div class="hex">#33FF33</div>
+          <div class="desc">亮荧光绿</div>
+        </div>
+      </div>
+
+      <div class="color-row">
+        <div class="swatch c2"></div>
+        <div class="info">
+          <div class="hex">#39FF14</div>
+          <div class="desc">Neon Green / 荧光绿常用值</div>
+        </div>
+      </div>
+
+      <div class="color-row">
+        <div class="swatch c3"></div>
+        <div class="info">
+          <div class="hex">#00FF41</div>
+          <div class="desc">终端绿 / hacker green 常用值</div>
+        </div>
+      </div>
+
+      <div class="color-row">
+        <div class="swatch c4"></div>
+        <div class="info">
+          <div class="hex">#66FF66</div>
+          <div class="desc">柔和一点的老屏幕绿</div>
+        </div>
+      </div>
+
+      <div class="color-row">
+        <div class="swatch c5"></div>
+        <div class="info">
+          <div class="hex">#7CFC00</div>
+          <div class="desc">Lawn Green，偏黄亮绿</div>
+        </div>
+      </div>
+
+      <div class="color-row">
+        <div class="swatch c6"></div>
+        <div class="info">
+          <div class="hex">#34C759</div>
+          <div class="desc">Mac Green，偏暗亮绿</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
