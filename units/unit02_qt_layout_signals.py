@@ -4,7 +4,15 @@ import sys
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6 import QtWidgets
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QGridLayout,
+    QMainWindow,
+    QWidget,
+)
 
 
 class SignalPlotWidget(pg.PlotWidget):
@@ -24,7 +32,7 @@ class SignalPlotWidget(pg.PlotWidget):
         self.showGrid(x=enabled, y=enabled, alpha=0.2)
 
 
-class SignalControlWindow(QtWidgets.QMainWindow):
+class SignalControlWindow(QMainWindow):
     """Qt window that owns layouts, controls, and signal/slot wiring."""
 
     def __init__(self) -> None:
@@ -34,37 +42,37 @@ class SignalControlWindow(QtWidgets.QMainWindow):
 
         self.x = np.linspace(0.0, 1.0, 1000)
 
-        central = QtWidgets.QWidget()
+        central = QWidget()
         self.setCentralWidget(central)
 
-        layout = QtWidgets.QGridLayout(central)
-        controls = QtWidgets.QFormLayout()
+        layout = QGridLayout(central)
+        controls = QFormLayout()
         layout.addLayout(controls, 0, 0)
 
         self.plot = SignalPlotWidget()
         layout.addWidget(self.plot, 0, 1)
         layout.setColumnStretch(1, 1)
 
-        self.frequency = QtWidgets.QDoubleSpinBox()
+        self.frequency = QDoubleSpinBox()
         self.frequency.setRange(0.1, 50.0)
         self.frequency.setSingleStep(0.5)
         self.frequency.setValue(5.0)
         self.frequency.setSuffix(" Hz")
         controls.addRow("Frequency", self.frequency)
 
-        self.amplitude = QtWidgets.QDoubleSpinBox()
+        self.amplitude = QDoubleSpinBox()
         self.amplitude.setRange(0.1, 5.0)
         self.amplitude.setSingleStep(0.1)
         self.amplitude.setValue(1.0)
         controls.addRow("Amplitude", self.amplitude)
 
-        self.phase = QtWidgets.QDoubleSpinBox()
+        self.phase = QDoubleSpinBox()
         self.phase.setRange(-180.0, 180.0)
         self.phase.setSingleStep(15.0)
         self.phase.setSuffix(" deg")
         controls.addRow("Phase", self.phase)
 
-        self.grid = QtWidgets.QCheckBox("Show grid")
+        self.grid = QCheckBox("Show grid")
         self.grid.setChecked(True)
         controls.addRow(self.grid)
 
@@ -89,7 +97,7 @@ class SignalControlWindow(QtWidgets.QMainWindow):
 
 
 def main() -> None:
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Unit 02 - Qt layouts and signals")
     window = SignalControlWindow()
     window.show()
