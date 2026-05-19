@@ -19,7 +19,7 @@ python -m pyqtgraph.examples
 
 ## 依赖清单
 
-这里只列依赖，不安装环境。PyQtGraph latest 文档和 GitHub README 当前说明的核心要求是 Python 3.12+、NumPy 2.0+，以及 PyQt5、PyQt6、PySide6 之一；Qt 版本要求为 Qt 5.15 或 Qt 6.8+。任选一个 Qt 绑定即可，推荐先用 PySide6：
+这里只列依赖，不安装环境。PyQtGraph latest 文档和 GitHub README 当前说明的核心要求是 Python 3.12+、NumPy 2.0+，以及 PyQt5、PyQt6、PySide6 之一；Qt 版本要求为 Qt 5.15 或 Qt 6.8+。本项目固定使用 PySide6：
 
 ```bash
 pip install "pyqtgraph" "numpy>=2.0" "PySide6"
@@ -35,7 +35,7 @@ pip install scipy matplotlib colorcet h5py pyopengl
 
 - `pyqtgraph`：核心绘图与 GUI 组件。
 - `numpy`：生成和处理数组数据。
-- `PySide6` / `PyQt6` / `PyQt5`：三选一，PyQtGraph 通过 `pyqtgraph.Qt` 做兼容抽象。
+- `PySide6`：本项目固定使用的 Qt 绑定，负责应用、窗口、控件、布局、信号槽、线程和定时器。
 - `scipy`：滤波、图像处理等高级数值功能。
 - `matplotlib`：部分导出和颜色映射功能。
 - `pyopengl`：3D 可视化。

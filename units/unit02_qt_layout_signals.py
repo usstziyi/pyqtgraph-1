@@ -1,12 +1,31 @@
 """Unit 02: embed PyQtGraph in a Qt layout and update it with signals."""
 
+import sys
+
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtWidgets
+from PySide6 import QtWidgets
+
+
+class SignalPlotWidget(pg.PlotWidget):
+    """PyQtGraph widget that owns the plot item and curve object."""
+
+    def __init__(self) -> None:
+        super().__init__(title="Signal controlled by Qt widgets")
+        self.setLabel("bottom", "time", units="s")
+        self.setLabel("left", "amplitude")
+        self.showGrid(x=True, y=True, alpha=0.2)
+        self.curve = self.plot(pen=pg.mkPen("#0072B2", width=2))
+
+    def set_signal(self, x: np.ndarray, y: np.ndarray) -> None:
+        self.curve.setData(x, y)
+
+    def set_grid_visible(self, enabled: bool) -> None:
+        self.showGrid(x=enabled, y=enabled, alpha=0.2)
 
 
 class SignalControlWindow(QtWidgets.QMainWindow):
-    """A small Qt window where widgets control a PyQtGraph plot."""
+    """Qt window that owns layouts, controls, and signal/slot wiring."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -22,10 +41,7 @@ class SignalControlWindow(QtWidgets.QMainWindow):
         controls = QtWidgets.QFormLayout()
         layout.addLayout(controls, 0, 0)
 
-        self.plot = pg.PlotWidget(title="Signal controlled by Qt widgets")
-        self.plot.setLabel("bottom", "time", units="s")
-        self.plot.setLabel("left", "amplitude")
-        self.plot.showGrid(x=True, y=True, alpha=0.2)
+        self.plot = SignalPlotWidget()
         layout.addWidget(self.plot, 0, 1)
         layout.setColumnStretch(1, 1)
 
@@ -52,8 +68,6 @@ class SignalControlWindow(QtWidgets.QMainWindow):
         self.grid.setChecked(True)
         controls.addRow(self.grid)
 
-        self.curve = self.plot.plot(pen=pg.mkPen("#0072B2", width=2))
-
         self.frequency.valueChanged.connect(self.redraw)
         self.amplitude.valueChanged.connect(self.redraw)
         self.phase.valueChanged.connect(self.redraw)
@@ -67,20 +81,20 @@ class SignalControlWindow(QtWidgets.QMainWindow):
         amp = self.amplitude.value()
         phase_rad = np.deg2rad(self.phase.value())
         y = amp * np.sin(2.0 * np.pi * freq * self.x + phase_rad)
-        self.curve.setData(self.x, y)
+        self.plot.set_signal(self.x, y)
 
     def toggle_grid(self, enabled: bool) -> None:
         """Qt sends the checkbox state here whenever the user toggles it."""
-        self.plot.showGrid(x=enabled, y=enabled, alpha=0.2)
+        self.plot.set_grid_visible(enabled)
 
 
 def main() -> None:
-    app = pg.mkQApp("Unit 02 - Qt layouts and signals")
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app.setApplicationName("Unit 02 - Qt layouts and signals")
     window = SignalControlWindow()
     window.show()
-    pg.exec()
+    app.exec()
 
 
 if __name__ == "__main__":
     main()
-

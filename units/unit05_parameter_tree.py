@@ -1,13 +1,79 @@
 """Unit 05: ParameterTree as a small settings model and editor."""
 
+import sys
+
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtWidgets
+from PySide6 import QtWidgets
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 
+def create_parameters() -> Parameter:
+    """Create the pyqtgraph Parameter model edited by the tree widget."""
+    return Parameter.create(
+        name="settings",
+        type="group",
+        children=[
+            {
+                "name": "Signal",
+                "type": "group",
+                "children": [
+                    {
+                        "name": "Frequency",
+                        "type": "float",
+                        "value": 4.0,
+                        "limits": (0.1, 30.0),
+                        "step": 0.1,
+                        "suffix": " Hz",
+                    },
+                    {
+                        "name": "Amplitude",
+                        "type": "float",
+                        "value": 1.0,
+                        "limits": (0.1, 5.0),
+                        "step": 0.1,
+                    },
+                ],
+            },
+            {
+                "name": "Style",
+                "type": "group",
+                "children": [
+                    {"name": "Color", "type": "color", "value": pg.mkColor("#0072B2")},
+                    {"name": "Show grid", "type": "bool", "value": True},
+                ],
+            },
+        ],
+    )
+
+
+class ParameterDrivenPlot(pg.PlotWidget):
+    """PyQtGraph plot that exposes update methods for data and style."""
+
+    def __init__(self) -> None:
+        super().__init__(title="Parameter-driven plot")
+        self.setLabel("bottom", "time", units="s")
+        self.setLabel("left", "amplitude")
+        self.curve = self.plot()
+
+    def set_signal(self, x: np.ndarray, y: np.ndarray, color: object) -> None:
+        self.curve.setData(x, y)
+        self.curve.setPen(pg.mkPen(color, width=2))
+
+    def set_grid_visible(self, enabled: bool) -> None:
+        self.showGrid(x=enabled, y=enabled, alpha=0.2)
+
+
+class ParameterPanel(ParameterTree):
+    """PyQtGraph ParameterTree widget bound to a Parameter model."""
+
+    def __init__(self, params: Parameter) -> None:
+        super().__init__()
+        self.setParameters(params, showTop=False)
+
+
 class ParameterTreeWindow(QtWidgets.QMainWindow):
-    """Use a ParameterTree to control both data and style."""
+    """Qt window that lays out the parameter editor and plot widget."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -20,52 +86,13 @@ class ParameterTreeWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(central)
         layout = QtWidgets.QHBoxLayout(central)
 
-        self.params = Parameter.create(
-            name="settings",
-            type="group",
-            children=[
-                {
-                    "name": "Signal",
-                    "type": "group",
-                    "children": [
-                        {
-                            "name": "Frequency",
-                            "type": "float",
-                            "value": 4.0,
-                            "limits": (0.1, 30.0),
-                            "step": 0.1,
-                            "suffix": " Hz",
-                        },
-                        {
-                            "name": "Amplitude",
-                            "type": "float",
-                            "value": 1.0,
-                            "limits": (0.1, 5.0),
-                            "step": 0.1,
-                        },
-                    ],
-                },
-                {
-                    "name": "Style",
-                    "type": "group",
-                    "children": [
-                        {"name": "Color", "type": "color", "value": pg.mkColor("#0072B2")},
-                        {"name": "Show grid", "type": "bool", "value": True},
-                    ],
-                },
-            ],
-        )
-
-        self.tree = ParameterTree()
-        self.tree.setParameters(self.params, showTop=False)
+        self.params = create_parameters()
+        self.tree = ParameterPanel(self.params)
         layout.addWidget(self.tree, 0)
 
-        self.plot = pg.PlotWidget(title="Parameter-driven plot")
-        self.plot.setLabel("bottom", "time", units="s")
-        self.plot.setLabel("left", "amplitude")
+        self.plot = ParameterDrivenPlot()
         layout.addWidget(self.plot, 1)
 
-        self.curve = self.plot.plot()
         self.params.sigTreeStateChanged.connect(self.on_parameter_change)
         self.update_plot()
 
@@ -81,18 +108,17 @@ class ParameterTreeWindow(QtWidgets.QMainWindow):
         show_grid = self.params.param("Style", "Show grid").value()
 
         y = amplitude * np.sin(2.0 * np.pi * frequency * self.x)
-        self.curve.setData(self.x, y)
-        self.curve.setPen(pg.mkPen(color, width=2))
-        self.plot.showGrid(x=show_grid, y=show_grid, alpha=0.2)
+        self.plot.set_signal(self.x, y, color)
+        self.plot.set_grid_visible(show_grid)
 
 
 def main() -> None:
-    app = pg.mkQApp("Unit 05 - ParameterTree")
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app.setApplicationName("Unit 05 - ParameterTree")
     window = ParameterTreeWindow()
     window.show()
-    pg.exec()
+    app.exec()
 
 
 if __name__ == "__main__":
     main()
-

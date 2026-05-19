@@ -4,8 +4,8 @@
 
 ## 总体检查项
 
-- 使用 `pyqtgraph.Qt`，避免把代码锁死在某一个 Qt 绑定上。
-- GUI 程序只创建一次 QApplication，并通过 `pg.mkQApp()` 与 `pg.exec()` 管理事件循环。
+- 使用 `PySide6` 创建 `QApplication`、窗口、控件、布局、信号槽和定时器。
+- 使用 `pyqtgraph` 创建和更新 `PlotWidget`、`GraphicsLayoutWidget`、`PlotDataItem`、`ImageItem` 和 ROI 等绘图对象。
 - 实时绘图复用 `PlotDataItem.setData()`，避免定时器里不断创建新曲线。
 - 大数据示例开启 `setClipToView()` 和 `setDownsampling()`。
 - 所有脚本都有 `main()` 和 `if __name__ == "__main__"`，可独立运行。

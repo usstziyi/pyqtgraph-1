@@ -1,12 +1,33 @@
 """Unit 03: realtime plotting with QTimer and setData()."""
 
+import sys
+
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
+
+
+class RealtimePlotWidget(pg.PlotWidget):
+    """PyQtGraph plot wrapper that owns the reusable PlotDataItem."""
+
+    def __init__(self, x: np.ndarray, y: np.ndarray) -> None:
+        super().__init__(title="Streaming data")
+        self.setLabel("bottom", "sample")
+        self.setLabel("left", "value")
+        self.showGrid(x=True, y=True, alpha=0.2)
+        self.curve = self.plot(
+            x,
+            y,
+            pen=pg.mkPen("#0072B2", width=2),
+            name="sensor",
+        )
+
+    def set_samples(self, x: np.ndarray, y: np.ndarray) -> None:
+        self.curve.setData(x, y)
 
 
 class RealtimeWindow(QtWidgets.QMainWindow):
-    """A fixed-size rolling buffer updated by a Qt timer."""
+    """Qt window with controls and a QTimer that updates a rolling buffer."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -33,18 +54,8 @@ class RealtimeWindow(QtWidgets.QMainWindow):
         toolbar.addWidget(self.status)
         toolbar.addStretch(1)
 
-        self.plot = pg.PlotWidget(title="Streaming data")
-        self.plot.setLabel("bottom", "sample")
-        self.plot.setLabel("left", "value")
-        self.plot.showGrid(x=True, y=True, alpha=0.2)
+        self.plot = RealtimePlotWidget(self.x, self.y)
         layout.addWidget(self.plot)
-
-        self.curve = self.plot.plot(
-            self.x,
-            self.y,
-            pen=pg.mkPen("#0072B2", width=2),
-            name="sensor",
-        )
 
         self.timer = QtCore.QTimer(self)
         self.timer.setInterval(30)
@@ -59,7 +70,7 @@ class RealtimeWindow(QtWidgets.QMainWindow):
 
         self.y[:-1] = self.y[1:]
         self.y[-1] = sample
-        self.curve.setData(self.x, self.y)
+        self.plot.set_samples(self.x, self.y)
 
     def toggle_timer(self) -> None:
         """Pause or resume without destroying the timer."""
@@ -74,12 +85,12 @@ class RealtimeWindow(QtWidgets.QMainWindow):
 
 
 def main() -> None:
-    app = pg.mkQApp("Unit 03 - Realtime timer")
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app.setApplicationName("Unit 03 - Realtime timer")
     window = RealtimeWindow()
     window.show()
-    pg.exec()
+    app.exec()
 
 
 if __name__ == "__main__":
     main()
-

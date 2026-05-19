@@ -1,15 +1,147 @@
 """Practical project: a realtime signal monitor built with PyQtGraph."""
 
 from pathlib import Path
+import sys
 
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 
+def create_parameters() -> Parameter:
+    """Create the pyqtgraph Parameter model used by the settings tree."""
+    return Parameter.create(
+        name="settings",
+        type="group",
+        children=[
+            {
+                "name": "Acquisition",
+                "type": "group",
+                "children": [
+                    {
+                        "name": "Sample rate",
+                        "type": "int",
+                        "value": 1000,
+                        "limits": (100, 5000),
+                        "step": 100,
+                        "suffix": " Hz",
+                    },
+                    {
+                        "name": "Refresh interval",
+                        "type": "int",
+                        "value": 40,
+                        "limits": (10, 500),
+                        "step": 10,
+                        "suffix": " ms",
+                    },
+                ],
+            },
+            {
+                "name": "Signal",
+                "type": "group",
+                "children": [
+                    {
+                        "name": "Frequency",
+                        "type": "float",
+                        "value": 30.0,
+                        "limits": (1.0, 450.0),
+                        "step": 1.0,
+                        "suffix": " Hz",
+                    },
+                    {
+                        "name": "Noise",
+                        "type": "float",
+                        "value": 0.08,
+                        "limits": (0.0, 1.0),
+                        "step": 0.01,
+                    },
+                ],
+            },
+            {
+                "name": "Analysis",
+                "type": "group",
+                "children": [
+                    {
+                        "name": "Window",
+                        "type": "list",
+                        "values": ["Hann", "Hamming", "Rectangular"],
+                        "value": "Hann",
+                    }
+                ],
+            },
+        ],
+    )
+
+
+class MonitorControlPanel(QtWidgets.QWidget):
+    """PySide6 control panel with buttons and a ParameterTree editor."""
+
+    def __init__(self, params: Parameter) -> None:
+        super().__init__()
+        layout = QtWidgets.QVBoxLayout(self)
+
+        self.tree = ParameterTree()
+        self.tree.setParameters(params, showTop=False)
+        layout.addWidget(self.tree)
+
+        self.pause_button = QtWidgets.QPushButton("Pause")
+        layout.addWidget(self.pause_button)
+
+        self.clear_button = QtWidgets.QPushButton("Clear")
+        layout.addWidget(self.clear_button)
+
+        self.export_button = QtWidgets.QPushButton("Export Buffer CSV")
+        layout.addWidget(self.export_button)
+        layout.addStretch(1)
+
+    def set_running(self, running: bool) -> None:
+        self.pause_button.setText("Pause" if running else "Resume")
+
+
+class MonitorPlots(pg.GraphicsLayoutWidget):
+    """PyQtGraph dashboard with time, frequency, and image plot items."""
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.time_plot = self.addPlot(row=0, col=0, title="Time domain")
+        self.time_plot.setLabel("bottom", "sample")
+        self.time_plot.setLabel("left", "amplitude")
+        self.time_plot.showGrid(x=True, y=True, alpha=0.2)
+        self.time_curve = self.time_plot.plot(pen=pg.mkPen("#0072B2", width=1))
+
+        self.freq_plot = self.addPlot(row=1, col=0, title="Frequency domain")
+        self.freq_plot.setLabel("bottom", "frequency", units="Hz")
+        self.freq_plot.setLabel("left", "magnitude")
+        self.freq_plot.showGrid(x=True, y=True, alpha=0.2)
+        self.freq_curve = self.freq_plot.plot(pen=pg.mkPen("#D55E00", width=1))
+
+        self.spec_plot = self.addPlot(row=2, col=0, title="Rolling spectrogram")
+        self.spec_plot.setLabel("bottom", "history frame")
+        self.spec_plot.setLabel("left", "frequency bin")
+        self.spec_image = pg.ImageItem(axisOrder="row-major")
+        self.spec_plot.addItem(self.spec_image)
+
+    def set_time_data(self, samples: np.ndarray, values: np.ndarray) -> None:
+        self.time_curve.setData(samples, values)
+
+    def set_frequency_data(
+        self,
+        frequencies: np.ndarray,
+        magnitude: np.ndarray,
+        max_frequency: float,
+    ) -> None:
+        self.freq_curve.setData(frequencies, magnitude)
+        self.freq_plot.setXRange(0, min(max_frequency, 500), padding=0)
+
+    def set_spectrogram(self, spectrogram: np.ndarray, magnitude: np.ndarray) -> None:
+        levels = (0, max(1.0, float(magnitude.max())))
+        self.spec_image.setImage(spectrogram.T, autoLevels=False, levels=levels)
+
+
 class SignalMonitor(QtWidgets.QMainWindow):
-    """Realtime time-domain, frequency-domain, and spectrogram dashboard."""
+    """Realtime controller that coordinates Qt controls and PyQtGraph plots."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -26,52 +158,19 @@ class SignalMonitor(QtWidgets.QMainWindow):
         self.time_axis = np.arange(self.buffer_size)
         self.spectrogram = np.zeros((self.spectrum_history, self.buffer_size // 2 + 1))
 
+        self.params = create_parameters()
+        self.controls = MonitorControlPanel(self.params)
+        self.plots = MonitorPlots()
+
         central = QtWidgets.QWidget()
         self.setCentralWidget(central)
         layout = QtWidgets.QHBoxLayout(central)
+        layout.addWidget(self.controls, 0)
+        layout.addWidget(self.plots, 1)
 
-        left = QtWidgets.QVBoxLayout()
-        layout.addLayout(left, 0)
-
-        self.params = self.create_parameters()
-        self.tree = ParameterTree()
-        self.tree.setParameters(self.params, showTop=False)
-        left.addWidget(self.tree)
-
-        self.pause_button = QtWidgets.QPushButton("Pause")
-        self.pause_button.clicked.connect(self.toggle_running)
-        left.addWidget(self.pause_button)
-
-        clear_button = QtWidgets.QPushButton("Clear")
-        clear_button.clicked.connect(self.clear_data)
-        left.addWidget(clear_button)
-
-        export_button = QtWidgets.QPushButton("Export Buffer CSV")
-        export_button.clicked.connect(self.choose_export_path)
-        left.addWidget(export_button)
-        left.addStretch(1)
-
-        self.graphics = pg.GraphicsLayoutWidget()
-        layout.addWidget(self.graphics, 1)
-
-        self.time_plot = self.graphics.addPlot(row=0, col=0, title="Time domain")
-        self.time_plot.setLabel("bottom", "sample")
-        self.time_plot.setLabel("left", "amplitude")
-        self.time_plot.showGrid(x=True, y=True, alpha=0.2)
-        self.time_curve = self.time_plot.plot(pen=pg.mkPen("#0072B2", width=1))
-
-        self.freq_plot = self.graphics.addPlot(row=1, col=0, title="Frequency domain")
-        self.freq_plot.setLabel("bottom", "frequency", units="Hz")
-        self.freq_plot.setLabel("left", "magnitude")
-        self.freq_plot.showGrid(x=True, y=True, alpha=0.2)
-        self.freq_curve = self.freq_plot.plot(pen=pg.mkPen("#D55E00", width=1))
-
-        self.spec_plot = self.graphics.addPlot(row=2, col=0, title="Rolling spectrogram")
-        self.spec_plot.setLabel("bottom", "history frame")
-        self.spec_plot.setLabel("left", "frequency bin")
-        self.spec_image = pg.ImageItem(axisOrder="row-major")
-        self.spec_plot.addItem(self.spec_image)
-
+        self.controls.pause_button.clicked.connect(self.toggle_running)
+        self.controls.clear_button.clicked.connect(self.clear_data)
+        self.controls.export_button.clicked.connect(self.choose_export_path)
         self.params.sigTreeStateChanged.connect(self.on_parameter_change)
 
         self.timer = QtCore.QTimer(self)
@@ -79,70 +178,6 @@ class SignalMonitor(QtWidgets.QMainWindow):
         self.timer.start(self.refresh_interval_ms)
 
         self.update_views()
-
-    @staticmethod
-    def create_parameters() -> Parameter:
-        return Parameter.create(
-            name="settings",
-            type="group",
-            children=[
-                {
-                    "name": "Acquisition",
-                    "type": "group",
-                    "children": [
-                        {
-                            "name": "Sample rate",
-                            "type": "int",
-                            "value": 1000,
-                            "limits": (100, 5000),
-                            "step": 100,
-                            "suffix": " Hz",
-                        },
-                        {
-                            "name": "Refresh interval",
-                            "type": "int",
-                            "value": 40,
-                            "limits": (10, 500),
-                            "step": 10,
-                            "suffix": " ms",
-                        },
-                    ],
-                },
-                {
-                    "name": "Signal",
-                    "type": "group",
-                    "children": [
-                        {
-                            "name": "Frequency",
-                            "type": "float",
-                            "value": 30.0,
-                            "limits": (1.0, 450.0),
-                            "step": 1.0,
-                            "suffix": " Hz",
-                        },
-                        {
-                            "name": "Noise",
-                            "type": "float",
-                            "value": 0.08,
-                            "limits": (0.0, 1.0),
-                            "step": 0.01,
-                        },
-                    ],
-                },
-                {
-                    "name": "Analysis",
-                    "type": "group",
-                    "children": [
-                        {
-                            "name": "Window",
-                            "type": "list",
-                            "values": ["Hann", "Hamming", "Rectangular"],
-                            "value": "Hann",
-                        }
-                    ],
-                },
-            ],
-        )
 
     @property
     def sample_rate(self) -> int:
@@ -187,18 +222,17 @@ class SignalMonitor(QtWidgets.QMainWindow):
 
     def update_views(self) -> None:
         """Update time plot, FFT plot, and spectrogram from the same buffer."""
-        self.time_curve.setData(self.time_axis, self.buffer)
+        self.plots.set_time_data(self.time_axis, self.buffer)
 
         windowed = self.buffer * self.analysis_window()
         magnitude = np.abs(np.fft.rfft(windowed))
         frequencies = np.fft.rfftfreq(self.buffer_size, d=1.0 / self.sample_rate)
 
-        self.freq_curve.setData(frequencies, magnitude)
-        self.freq_plot.setXRange(0, min(self.sample_rate / 2, 500), padding=0)
+        self.plots.set_frequency_data(frequencies, magnitude, self.sample_rate / 2)
 
         self.spectrogram[:-1] = self.spectrogram[1:]
         self.spectrogram[-1] = magnitude
-        self.spec_image.setImage(self.spectrogram.T, autoLevels=False, levels=(0, max(1.0, magnitude.max())))
+        self.plots.set_spectrogram(self.spectrogram, magnitude)
 
     def analysis_window(self) -> np.ndarray:
         """Return the selected FFT window as an array matching the buffer."""
@@ -210,7 +244,7 @@ class SignalMonitor(QtWidgets.QMainWindow):
 
     def toggle_running(self) -> None:
         self.running = not self.running
-        self.pause_button.setText("Pause" if self.running else "Resume")
+        self.controls.set_running(self.running)
 
     def clear_data(self) -> None:
         self.buffer[:] = 0.0
@@ -235,10 +269,11 @@ class SignalMonitor(QtWidgets.QMainWindow):
 
 
 def main() -> None:
-    app = pg.mkQApp("PyQtGraph Signal Monitor")
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app.setApplicationName("PyQtGraph Signal Monitor")
     window = SignalMonitor()
     window.show()
-    pg.exec()
+    app.exec()
 
 
 if __name__ == "__main__":
