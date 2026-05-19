@@ -157,10 +157,10 @@ class SignalMonitor(QMainWindow):
         self.setWindowTitle("PyQtGraph Practical Project - Signal Monitor")
         self.resize(1280, 760)
 
-        self.buffer_size = 4096
-        self.chunk_size = 128
-        self.spectrum_history = 120
-        self.sample_index = 0
+        self.buffer_size = 4096  # 缓冲区大小（采样点数）
+        self.chunk_size = 128  # 每次采集的块大小（采样点数）
+        self.spectrum_history = 120  # 频谱历史帧数（用于滚动显示）
+        self.sample_index = 0  # 当前采样索引（用于生成信号的时间轴）
         self.running = True
 
         self.buffer = np.zeros(self.buffer_size)
@@ -188,6 +188,14 @@ class SignalMonitor(QMainWindow):
 
         self.update_views()
 
+    """
+    它把这个 方法 变成了一个 属性 ，改变了调用方式：
+        # 没有 @property —— 写成方法调用
+        monitor.refresh_interval_ms()
+
+        # 有 @property —— 写成属性访问（不用括号）
+        monitor.refresh_interval_ms
+    """
     @property
     def sample_rate(self) -> int:
         return self.params.param("Acquisition", "Sample rate").value()
@@ -280,6 +288,7 @@ class SignalMonitor(QMainWindow):
 def main() -> None:
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("PyQtGraph Signal Monitor")
+    app.setStyle("Fusion")
     window = SignalMonitor()
     window.show()
     app.exec()
