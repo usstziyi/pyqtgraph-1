@@ -12,7 +12,7 @@ def create_parameters() -> Parameter:
     """Create the pyqtgraph Parameter model edited by the tree widget."""
     return Parameter.create(
         name="settings",
-        type="group",
+        type="group", # group表示文件夹，只用于组织层级，本身不含数据
         children=[
             {
                 "name": "Signal",
@@ -39,7 +39,7 @@ def create_parameters() -> Parameter:
                 "name": "Style",
                 "type": "group",
                 "children": [
-                    {"name": "Color", "type": "color", "value": pg.mkColor("#0072B2")},
+                    {"name": "Color", "type": "color", "value": pg.mkColor("#33FF33")},
                     {"name": "Show grid", "type": "bool", "value": True},
                 ],
             },
@@ -52,6 +52,7 @@ class ParameterDrivenPlot(pg.PlotWidget):
 
     def __init__(self) -> None:
         super().__init__(title="Parameter-driven plot")
+        self.setTitle("Parameter-driven plot")
         self.setLabel("bottom", "time", units="s")
         self.setLabel("left", "amplitude")
         self.curve = self.plot()
@@ -69,7 +70,10 @@ class ParameterPanel(ParameterTree):
 
     def __init__(self, params: Parameter) -> None:
         super().__init__()
-        self.setParameters(params, showTop=False)
+        # 隐藏最上面的 Parameter / Value 表头
+        # self.header().hide()
+        # 不隐藏根节点 ，显示最顶层参数
+        self.setParameters(params, showTop=True)
 
 
 class ParameterTreeWindow(QMainWindow):
@@ -86,13 +90,20 @@ class ParameterTreeWindow(QMainWindow):
         self.setCentralWidget(central)
         layout = QHBoxLayout(central)
 
-        self.params = create_parameters()
-        self.tree = ParameterPanel(self.params)
+        """
+        这会把参数模型（Model）绑定到树形 UI 控件（View）上，
+        自动生成一个可交互的参数编辑面板，用户可以在这里修改频率、振幅、颜色等参数。
+        """
+        # 创建一个 Parameter 树模型
+        self.params = create_parameters() # Model
+        # ParameterPanel 继承自 ParameterTree
+        self.tree = ParameterPanel(self.params) # View
         layout.addWidget(self.tree, 0)
-
+        pg.setConfigOptions(antialias=True)
         self.plot = ParameterDrivenPlot()
         layout.addWidget(self.plot, 1)
 
+        # 当用户修改参数时，自动通知绘图组件更新
         self.params.sigTreeStateChanged.connect(self.on_parameter_change)
         self.update_plot()
 
@@ -115,6 +126,7 @@ class ParameterTreeWindow(QMainWindow):
 def main() -> None:
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Unit 05 - ParameterTree")
+    app.setStyle("Fusion")
     window = ParameterTreeWindow()
     window.show()
     app.exec()
