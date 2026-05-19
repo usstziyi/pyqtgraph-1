@@ -5,7 +5,16 @@ import sys
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from PySide6.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QHBoxLayout,
+    QMainWindow,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 
@@ -74,24 +83,24 @@ def create_parameters() -> Parameter:
     )
 
 
-class MonitorControlPanel(QtWidgets.QWidget):
+class MonitorControlPanel(QWidget):
     """PySide6 control panel with buttons and a ParameterTree editor."""
 
     def __init__(self, params: Parameter) -> None:
         super().__init__()
-        layout = QtWidgets.QVBoxLayout(self)
+        layout = QVBoxLayout(self)
 
         self.tree = ParameterTree()
         self.tree.setParameters(params, showTop=False)
         layout.addWidget(self.tree)
 
-        self.pause_button = QtWidgets.QPushButton("Pause")
+        self.pause_button = QPushButton("Pause")
         layout.addWidget(self.pause_button)
 
-        self.clear_button = QtWidgets.QPushButton("Clear")
+        self.clear_button = QPushButton("Clear")
         layout.addWidget(self.clear_button)
 
-        self.export_button = QtWidgets.QPushButton("Export Buffer CSV")
+        self.export_button = QPushButton("Export Buffer CSV")
         layout.addWidget(self.export_button)
         layout.addStretch(1)
 
@@ -140,7 +149,7 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         self.spec_image.setImage(spectrogram.T, autoLevels=False, levels=levels)
 
 
-class SignalMonitor(QtWidgets.QMainWindow):
+class SignalMonitor(QMainWindow):
     """Realtime controller that coordinates Qt controls and PyQtGraph plots."""
 
     def __init__(self) -> None:
@@ -162,9 +171,9 @@ class SignalMonitor(QtWidgets.QMainWindow):
         self.controls = MonitorControlPanel(self.params)
         self.plots = MonitorPlots()
 
-        central = QtWidgets.QWidget()
+        central = QWidget()
         self.setCentralWidget(central)
-        layout = QtWidgets.QHBoxLayout(central)
+        layout = QHBoxLayout(central)
         layout.addWidget(self.controls, 0)
         layout.addWidget(self.plots, 1)
 
@@ -253,7 +262,7 @@ class SignalMonitor(QtWidgets.QMainWindow):
         self.update_views()
 
     def choose_export_path(self) -> None:
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+        path, _ = QFileDialog.getSaveFileName(
             self,
             "Export buffer",
             "signal_buffer.csv",
@@ -269,7 +278,7 @@ class SignalMonitor(QtWidgets.QMainWindow):
 
 
 def main() -> None:
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("PyQtGraph Signal Monitor")
     window = SignalMonitor()
     window.show()

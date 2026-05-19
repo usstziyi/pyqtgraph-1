@@ -4,7 +4,16 @@ import sys
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class RealtimePlotWidget(pg.PlotWidget):
@@ -26,7 +35,7 @@ class RealtimePlotWidget(pg.PlotWidget):
         self.curve.setData(x, y)
 
 
-class RealtimeWindow(QtWidgets.QMainWindow):
+class RealtimeWindow(QMainWindow):
     """Qt window with controls and a QTimer that updates a rolling buffer."""
 
     def __init__(self) -> None:
@@ -39,18 +48,18 @@ class RealtimeWindow(QtWidgets.QMainWindow):
         self.x = np.arange(self.buffer_size)
         self.y = np.full(self.buffer_size, np.nan)
 
-        central = QtWidgets.QWidget()
+        central = QWidget()
         self.setCentralWidget(central)
 
-        layout = QtWidgets.QVBoxLayout(central)
-        toolbar = QtWidgets.QHBoxLayout()
+        layout = QVBoxLayout(central)
+        toolbar = QHBoxLayout()
         layout.addLayout(toolbar)
 
-        self.toggle = QtWidgets.QPushButton("Pause")
+        self.toggle = QPushButton("Pause")
         self.toggle.clicked.connect(self.toggle_timer)
         toolbar.addWidget(self.toggle)
 
-        self.status = QtWidgets.QLabel("running")
+        self.status = QLabel("running")
         toolbar.addWidget(self.status)
         toolbar.addStretch(1)
 
@@ -85,7 +94,7 @@ class RealtimeWindow(QtWidgets.QMainWindow):
 
 
 def main() -> None:
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Unit 03 - Realtime timer")
     window = RealtimeWindow()
     window.show()

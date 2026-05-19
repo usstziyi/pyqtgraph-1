@@ -51,7 +51,9 @@ class SignalControlWindow(QMainWindow):
 
         self.plot = SignalPlotWidget()
         layout.addWidget(self.plot, 0, 1)
+        # 第1列(0起头)，占用所有多余空间
         layout.setColumnStretch(1, 1)
+        # QGridLayout.setColumnStretch(column, stretch)
 
         self.frequency = QDoubleSpinBox()
         self.frequency.setRange(0.1, 50.0)

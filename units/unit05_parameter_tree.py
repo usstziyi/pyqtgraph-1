@@ -4,7 +4,7 @@ import sys
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6 import QtWidgets
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 
@@ -72,7 +72,7 @@ class ParameterPanel(ParameterTree):
         self.setParameters(params, showTop=False)
 
 
-class ParameterTreeWindow(QtWidgets.QMainWindow):
+class ParameterTreeWindow(QMainWindow):
     """Qt window that lays out the parameter editor and plot widget."""
 
     def __init__(self) -> None:
@@ -82,9 +82,9 @@ class ParameterTreeWindow(QtWidgets.QMainWindow):
 
         self.x = np.linspace(0.0, 1.0, 1200)
 
-        central = QtWidgets.QWidget()
+        central = QWidget()
         self.setCentralWidget(central)
-        layout = QtWidgets.QHBoxLayout(central)
+        layout = QHBoxLayout(central)
 
         self.params = create_parameters()
         self.tree = ParameterPanel(self.params)
@@ -113,7 +113,7 @@ class ParameterTreeWindow(QtWidgets.QMainWindow):
 
 
 def main() -> None:
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Unit 05 - ParameterTree")
     window = ParameterTreeWindow()
     window.show()

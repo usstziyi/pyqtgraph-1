@@ -6,7 +6,16 @@ import sys
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.exporters
-from PySide6 import QtWidgets
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QFileDialog,
+    QHBoxLayout,
+    QMainWindow,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class LargeSignalPlot(pg.PlotWidget):
@@ -28,7 +37,7 @@ class LargeSignalPlot(pg.PlotWidget):
         return self.plotItem
 
 
-class ExportPerformanceWindow(QtWidgets.QMainWindow):
+class ExportPerformanceWindow(QMainWindow):
     """Qt window that owns controls, dialogs, and export actions."""
 
     def __init__(self) -> None:
@@ -38,23 +47,23 @@ class ExportPerformanceWindow(QtWidgets.QMainWindow):
 
         self.x, self.y = self.make_data(point_count=250_000)
 
-        central = QtWidgets.QWidget()
+        central = QWidget()
         self.setCentralWidget(central)
-        layout = QtWidgets.QVBoxLayout(central)
+        layout = QVBoxLayout(central)
 
-        toolbar = QtWidgets.QHBoxLayout()
+        toolbar = QHBoxLayout()
         layout.addLayout(toolbar)
 
-        self.downsample = QtWidgets.QCheckBox("Downsample")
+        self.downsample = QCheckBox("Downsample")
         self.downsample.setChecked(True)
         self.downsample.toggled.connect(self.apply_performance_options)
         toolbar.addWidget(self.downsample)
 
-        export_csv = QtWidgets.QPushButton("Export CSV")
+        export_csv = QPushButton("Export CSV")
         export_csv.clicked.connect(self.choose_csv_path)
         toolbar.addWidget(export_csv)
 
-        export_png = QtWidgets.QPushButton("Export PNG")
+        export_png = QPushButton("Export PNG")
         export_png.clicked.connect(self.choose_png_path)
         toolbar.addWidget(export_png)
         toolbar.addStretch(1)
@@ -81,7 +90,7 @@ class ExportPerformanceWindow(QtWidgets.QMainWindow):
         self.plot.set_performance_options(self.downsample.isChecked())
 
     def choose_csv_path(self) -> None:
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+        path, _ = QFileDialog.getSaveFileName(
             self,
             "Export data",
             "large_signal.csv",
@@ -91,7 +100,7 @@ class ExportPerformanceWindow(QtWidgets.QMainWindow):
             self.export_csv(Path(path))
 
     def choose_png_path(self) -> None:
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+        path, _ = QFileDialog.getSaveFileName(
             self,
             "Export plot",
             "large_signal.png",
@@ -112,7 +121,7 @@ class ExportPerformanceWindow(QtWidgets.QMainWindow):
 
 
 def main() -> None:
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Unit 06 - Export and performance")
     window = ExportPerformanceWindow()
     window.show()

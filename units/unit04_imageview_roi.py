@@ -4,7 +4,7 @@ import sys
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6 import QtWidgets
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget
 
 
 def make_image(size: int = 180) -> np.ndarray:
@@ -35,7 +35,7 @@ class RoiImageView(pg.ImageView):
         return self.roi.getArrayRegion(self.data, self.getImageItem())
 
 
-class ImageRoiWindow(QtWidgets.QMainWindow):
+class ImageRoiWindow(QMainWindow):
     """Qt window that lays out the image view and ROI statistics label."""
 
     def __init__(self) -> None:
@@ -45,14 +45,14 @@ class ImageRoiWindow(QtWidgets.QMainWindow):
 
         self.data = make_image()
 
-        central = QtWidgets.QWidget()
+        central = QWidget()
         self.setCentralWidget(central)
-        layout = QtWidgets.QVBoxLayout(central)
+        layout = QVBoxLayout(central)
 
         self.image_view = RoiImageView(self.data)
         layout.addWidget(self.image_view)
 
-        self.stats = QtWidgets.QLabel()
+        self.stats = QLabel()
         layout.addWidget(self.stats)
 
         self.image_view.roi.sigRegionChanged.connect(self.update_roi_stats)
@@ -77,7 +77,7 @@ class ImageRoiWindow(QtWidgets.QMainWindow):
 
 
 def main() -> None:
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Unit 04 - ImageView and ROI")
     window = ImageRoiWindow()
     window.show()

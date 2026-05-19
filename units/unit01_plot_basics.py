@@ -4,10 +4,10 @@ import sys
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6 import QtWidgets
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QLabel
+    QApplication,
+    QMainWindow,
 )
 
 
@@ -69,8 +69,8 @@ class MainWindow(QMainWindow):
 def main() -> None:
     # 先检查当前进程中是否已经存在一个 QApplication 实例
     # 如果 已经存在 （返回非 None ），则 or 短路，直接复用这个已有的实例，不会再创建新的。
-    # 如果 不存在 （返回 None ），则 or 右侧的 QtWidgets.QApplication(sys.argv) 会被执行，创建一个新的 QApplication 实例。
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    # 如果 不存在 （返回 None ），则 or 右侧的 QApplication(sys.argv) 会被执行，创建一个新的 QApplication 实例。
+    app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Unit 01 - Plot basics") # 不会显示在窗口标题栏上
     window = MainWindow()
     window.show()
