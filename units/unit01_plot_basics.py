@@ -6,12 +6,16 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6 import QtWidgets
 
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QLabel
+)
+
 
 class PlotBasicsWidget(pg.PlotWidget):
     """PyQtGraph widget that owns the plot item and its data layers."""
 
     def __init__(self) -> None:
-        super().__init__(title="Unit 01 - Plot basics")
+        super().__init__()
         self.configure_plot()
         self.add_data_layers()
 
@@ -44,30 +48,31 @@ class PlotBasicsWidget(pg.PlotWidget):
         )
 
 
-class PlotBasicsWindow(QtWidgets.QMainWindow):
-    """PySide6 window that hosts the PyQtGraph plotting widget."""
-
+class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Unit 01 - Plot basics")
         self.resize(900, 520)
+        # 启用抗锯齿功能，使绘制的曲线边缘更加平滑，减少锯齿状效果
+        # 这会略微降低渲染性能，但能显著提升视觉质量
+        # pg 是 pyqtgraph 模块本身， 
+        # pg.setConfigOptions() 是在调用该模块提供的配置函数，
+        # 属于 全局配置，一旦调用，会影响之后创建的所有 pyqtgraph 绘图组件。
+        pg.setConfigOptions(antialias=True)
         self.plot = PlotBasicsWidget()
+        # setCentralWidget 会自动建立父子关系
         self.setCentralWidget(self.plot)
 
 
-def build_window() -> PlotBasicsWindow:
-    """Create the Qt window used by this unit."""
-    # 启用抗锯齿功能，使绘制的曲线边缘更加平滑，减少锯齿状效果
-    # 这会略微降低渲染性能，但能显著提升视觉质量
-    pg.setConfigOptions(antialias=True)
-
-    return PlotBasicsWindow()
 
 
 def main() -> None:
+    # 先检查当前进程中是否已经存在一个 QApplication 实例
+    # 如果 已经存在 （返回非 None ），则 or 短路，直接复用这个已有的实例，不会再创建新的。
+    # 如果 不存在 （返回 None ），则 or 右侧的 QtWidgets.QApplication(sys.argv) 会被执行，创建一个新的 QApplication 实例。
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
-    app.setApplicationName("Unit 01 - Plot basics")
-    window = build_window()
+    app.setApplicationName("Unit 01 - Plot basics") # 不会显示在窗口标题栏上
+    window = MainWindow()
     window.show()
     app.exec()
 
