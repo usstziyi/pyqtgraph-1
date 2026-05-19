@@ -19,13 +19,17 @@ class SignalPlotWidget(pg.PlotWidget):
     """PyQtGraph widget that owns the plot item and curve object."""
 
     def __init__(self) -> None:
-        super().__init__(title="Signal controlled by Qt widgets")
+        super().__init__()
+        self.setTitle("Signal controlled by Qt widgets")
         self.setLabel("bottom", "time", units="s")
         self.setLabel("left", "amplitude")
         self.showGrid(x=True, y=True, alpha=0.2)
+        # 先创建一个空曲线占位，之后反复调用 setData() 更新，
+        # 避免反复创建/销毁曲线对象，性能更好。
         self.curve = self.plot(pen=pg.mkPen("#0072B2", width=2))
 
     def set_signal(self, x: np.ndarray, y: np.ndarray) -> None:
+        # 复用同一个 curve 对象，只更新数据
         self.curve.setData(x, y)
 
     def set_grid_visible(self, enabled: bool) -> None:
@@ -83,6 +87,7 @@ class SignalControlWindow(QMainWindow):
         self.phase.valueChanged.connect(self.redraw)
         self.grid.toggled.connect(self.toggle_grid)
 
+        # 初始化时绘制一次默认信号
         self.redraw()
 
     def redraw(self) -> None:

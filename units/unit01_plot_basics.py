@@ -16,6 +16,7 @@ class PlotBasicsWidget(pg.PlotWidget):
 
     def __init__(self) -> None:
         super().__init__()
+        self.setTitle("Unit 01 - Plot basics")
         self.configure_plot()
         self.add_data_layers()
 
