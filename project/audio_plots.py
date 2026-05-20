@@ -2,6 +2,7 @@
 
 import numpy as np
 import pyqtgraph as pg
+from PySide6 import QtCore
 
 try:
     from .audio_constants import DB_FLOOR, FREQUENCY_VIEW_LIMIT
@@ -10,7 +11,12 @@ except ImportError:
 
 
 class MonitorPlots(pg.GraphicsLayoutWidget):
-    """PyQtGraph dashboard with waveform, spectrum, and rolling spectrogram."""
+    """
+    yQtGraph dashboard with 
+    waveform, 时域波形图
+    spectrum, 频域波形图
+    olling spectrogram, 滚动频谱图
+    """
 
     def __init__(self) -> None:
         super().__init__()
@@ -36,11 +42,19 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         self.spec_plot.getAxis("bottom").autoSIPrefix = False
         self.spec_plot.getAxis("left").autoSIPrefix = False
         self.spec_bottom_axis = self.spec_plot.getAxis("bottom")
+        # self.spec_plot.invertY(True) # 翻转Y轴
 
         self.spec_image = pg.ImageItem(data=None, axisOrder="row-major")
         self.spec_plot.addItem(self.spec_image)
         cmap = pg.colormap.get("plasma")
         self.spec_image.setLookupTable(cmap.getLookupTable(nPts=256))
+        marker_pen = pg.mkPen("#FFFFFF", width=1, style=pg.QtCore.Qt.PenStyle.DashLine)
+        self.spec_marker_lines = {
+            20: pg.InfiniteLine(angle=90, movable=False, pen=marker_pen),
+            20000: pg.InfiniteLine(angle=90, movable=False, pen=marker_pen),
+        }
+        for line in self.spec_marker_lines.values():
+            self.spec_plot.addItem(line)
 
     def set_time_data(self, times: np.ndarray, values: np.ndarray) -> None:
         self.time_curve.setData(times, values)
@@ -62,31 +76,40 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         )
 
     def set_spectrogram(self, spectrogram: np.ndarray, sample_rate: int) -> None:
-        self.spec_image.setImage(spectrogram, levels=(DB_FLOOR, 0), autoLevels=False)
-        self._set_frequency_ticks(spectrogram.shape[1], sample_rate)
-
-    def _set_frequency_ticks(self, n_bins: int, sample_rate: int) -> None:
+        n_frames, n_bins = spectrogram.shape
         nyquist = sample_rate / 2
-        if n_bins <= 1 or nyquist <= 0:
+        self.spec_image.setImage(spectrogram, levels=(DB_FLOOR, 0), autoLevels=False)
+        if n_bins > 1 and nyquist > 0:
+            bin_width = nyquist / (n_bins - 1)
+            self.spec_image.setRect(
+                QtCore.QRectF(-bin_width / 2, 0, nyquist + bin_width, n_frames)
+            )
+            self.spec_plot.setXRange(0, nyquist, padding=0)
+            self.spec_plot.setYRange(0, n_frames, padding=0)
+        self._set_frequency_ticks(sample_rate)
+        self._set_frequency_markers(sample_rate)
+
+    def _set_frequency_ticks(self, sample_rate: int) -> None:
+        nyquist = sample_rate / 2
+        if nyquist <= 0:
             self.spec_bottom_axis.setTicks([])
             return
 
-        max_bin = n_bins - 1
-        raw_step = nyquist / 5
-        magnitude = 10 ** int(np.log10(max(raw_step, 1)))
-        residual = raw_step / magnitude
-        if residual < 1.5:
-            step = magnitude
-        elif residual < 3:
-            step = 2 * magnitude
-        elif residual < 7:
-            step = 5 * magnitude
-        else:
-            step = 10 * magnitude
-
-        ticks = []
-        hz = 0.0
-        while hz <= nyquist + step * 0.01:
-            ticks.append((hz / nyquist * max_bin, f"{hz:.0f}"))
-            hz += step
+        tick_hz = (0, 5000, 10000, 15000, 20000, 24000)
+        ticks = [(hz, f"{hz:.0f}") for hz in tick_hz if hz <= nyquist]
         self.spec_bottom_axis.setTicks([ticks])
+
+    def _set_frequency_markers(self, sample_rate: int) -> None:
+        # 计算奈奎斯特频率（采样率的一半，频谱显示的最大频率）
+        nyquist = sample_rate / 2
+        if nyquist <= 0:
+            for line in self.spec_marker_lines.values():
+                line.hide()
+            return
+
+        for hz, line in self.spec_marker_lines.items():
+            if hz <= nyquist:
+                line.setValue(hz)
+                line.show()
+            else:
+                line.hide()
