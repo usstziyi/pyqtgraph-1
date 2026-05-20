@@ -24,6 +24,7 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         self.time_plot = self.addPlot(row=0, col=0, title="Microphone waveform")
         self.time_plot.setLabel("bottom", "time", units="s")
         self.time_plot.setLabel("left", "amplitude")
+        self.time_plot.getAxis("left").autoSIPrefix = False
         self.time_plot.setYRange(-1.0, 1.0, padding=0)
         self.time_plot.showGrid(x=True, y=True, alpha=0.2)
         self.time_curve = self.time_plot.plot(pen=pg.mkPen("#33FF33", width=1))
@@ -46,7 +47,7 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
 
         self.spec_image = pg.ImageItem(data=None, axisOrder="row-major")
         self.spec_plot.addItem(self.spec_image)
-        cmap = pg.colormap.get("plasma")
+        cmap = pg.colormap.get("plasma") #plasma #magma
         self.spec_image.setLookupTable(cmap.getLookupTable(nPts=256))
         marker_pen = pg.mkPen("#FFFFFF", width=1, style=pg.QtCore.Qt.PenStyle.DashLine)
         self.spec_marker_lines = {
@@ -78,26 +79,21 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
     def set_spectrogram(self, spectrogram: np.ndarray, sample_rate: int) -> None:
         n_frames, n_bins = spectrogram.shape
         nyquist = sample_rate / 2
+        # 默认情况下，如果你没有额外设置 setRect() 或 transform，那么这张图像会按数组索引坐标显示
         self.spec_image.setImage(spectrogram, levels=(DB_FLOOR, 0), autoLevels=False)
         if n_bins > 1 and nyquist > 0:
+            # 每个频率箱的频率宽度：频率分辨率
             bin_width = nyquist / (n_bins - 1)
             self.spec_image.setRect(
-                QtCore.QRectF(-bin_width / 2, 0, nyquist + bin_width, n_frames)
+                # 把图像映射到：
+                # x: [0 , nyquist]
+                # y: [0 , n_frames]
+                QtCore.QRectF(0, 0, nyquist, n_frames)
+                # QtCore.QRectF(-bin_width / 2, 0, nyquist + bin_width, n_frames)
             )
-            self.spec_plot.setXRange(0, nyquist, padding=0)
-            self.spec_plot.setYRange(0, n_frames, padding=0)
-        self._set_frequency_ticks(sample_rate)
+        
+        # 更新频谱图中的频率标记线位置
         self._set_frequency_markers(sample_rate)
-
-    def _set_frequency_ticks(self, sample_rate: int) -> None:
-        nyquist = sample_rate / 2
-        if nyquist <= 0:
-            self.spec_bottom_axis.setTicks([])
-            return
-
-        tick_hz = (0, 5000, 10000, 15000, 20000, 24000)
-        ticks = [(hz, f"{hz:.0f}") for hz in tick_hz if hz <= nyquist]
-        self.spec_bottom_axis.setTicks([ticks])
 
     def _set_frequency_markers(self, sample_rate: int) -> None:
         # 计算奈奎斯特频率（采样率的一半，频谱显示的最大频率）
