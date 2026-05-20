@@ -58,7 +58,7 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
                 # QtCore.QRectF(-bin_width / 2, 0, nyquist + bin_width, n_frames)
         )
         self.spec_marker_lines = {
-            20: pg.InfiniteLine(pos=20, angle=90, movable=False, pen=marker_pen),
+            # 20: pg.InfiniteLine(pos=20, angle=90, movable=False, pen=marker_pen),
             20000: pg.InfiniteLine(pos=20000, angle=90, movable=False, pen=marker_pen),
         }
         for line in self.spec_marker_lines.values():
@@ -66,8 +66,8 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         self.spec_marker_labels: dict[int, pg.TextItem] = {}
         for hz in self.spec_marker_lines:
             label_text = f"{hz / 1000:.0f}k Hz" if hz >= 1000 else f"{hz} Hz"
-            label = pg.TextItem(text=label_text, color="#FFFFFF", anchor=(0.5, 1))
-            label.setPos(hz, 0)
+            label = pg.TextItem(text=label_text, color="#FFFFFF", anchor=(0, 0))
+            label.setPos(hz, 120)
             self.spec_plot.addItem(label)
             self.spec_marker_labels[hz] = label
 
