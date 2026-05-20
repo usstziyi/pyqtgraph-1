@@ -11,17 +11,23 @@ except ImportError:
 
 """音频解码部分"""
 def choose_audio_format(device: QAudioDevice) -> QAudioFormat:
-    """Prefer mono Int16 at the target rate, then fall back to supported formats."""
-    """在目标速率下首选:单声道+Int16，否则退回到支持的格式。"""
+    """
+    return {
+        采样路
+        通道数
+        采样格式
+    }
+    """
     preferred = device.preferredFormat()
 
     requested = QAudioFormat()
     requested.setSampleRate(target_sample_rate(device, preferred.sampleRate()))
     requested.setChannelCount(target_channel_count(device))
     requested.setSampleFormat(QAudioFormat.SampleFormat.Int16)
-    # 驱动上再次确认
+    # 驱动上再次确认是否支持采样率
     if device.isFormatSupported(requested):
         return requested
+
     # 如果目标采样率不支持，直接用设备偏好的采样率
     int16_preferred_rate = QAudioFormat()
     int16_preferred_rate.setSampleRate(preferred.sampleRate())
@@ -32,7 +38,7 @@ def choose_audio_format(device: QAudioDevice) -> QAudioFormat:
 
     return preferred
 
-# 数值上初步检测
+# 采样率数值上初步检测
 def target_sample_rate(device: QAudioDevice, fallback: int) -> int:
     """根据设备支持的采样率范围，选择最合适的采样率。"""
     minimum = device.minimumSampleRate()
@@ -84,6 +90,9 @@ def decode_audio(raw: bytes, audio_format: QAudioFormat) -> np.ndarray:
 
     # 多声道音频通常是交错排列：L0, R0, L1, R1, ...
     frame_width = sample_width * channel_count
+
+    # 计算可用于完整帧的字节数：去除末尾不足一帧的剩余字节
+    # 确保音频数据可以被完整解析为整数个采样帧，避免数据截断导致的解码错误
     usable_bytes = len(raw) - (len(raw) % frame_width)
     if usable_bytes <= 0:
         return np.empty(0, dtype=np.float32)

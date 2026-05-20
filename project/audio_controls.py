@@ -53,10 +53,16 @@ class MonitorControlPanel(QWidget):
 
     def set_devices(self, names: list[str], current_index: int) -> None:
         # 临时阻断信号，避免清空/添加条目过程中意外触发设备切换。
+        # clear()
+        # addItems()
+        # setCurrentIndex()
+        # 这些操作会触发currentIndexChanged
         self.device_combo.blockSignals(True)
         self.device_combo.clear()
         self.device_combo.addItems(names)
         if names:
+            # 因为 set_devices() 是在刷新设备列表，不是用户主动选择设备
+            # 因此这次设置index不要发信号
             self.device_combo.setCurrentIndex(current_index)
         self.device_combo.blockSignals(False)
         self.device_combo.setEnabled(bool(names))

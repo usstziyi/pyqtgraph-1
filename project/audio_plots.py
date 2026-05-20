@@ -24,7 +24,7 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
 
         self.freq_plot = self.addPlot(row=1, col=0, title="Frequency spectrum")
         self.freq_plot.setLabel("bottom", "frequency", units="Hz")
-        self.freq_plot.setLabel("left", "level", units="dBFS") # decibels relative to full scale 相对于数字音频最大满幅值的分贝 表示：当前数字音频信号离系统能表示的最大幅度还有多远
+        self.freq_plot.setLabel("left", "level", units="dBFS") 
         self.freq_plot.setYRange(DB_FLOOR, 0, padding=0)
         self.freq_plot.showGrid(x=True, y=True, alpha=0.2)
         self.freq_curve = self.freq_plot.plot(pen=pg.mkPen("#D55E00", width=1))

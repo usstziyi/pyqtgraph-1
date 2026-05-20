@@ -86,28 +86,46 @@ class AudioMonitor(QMainWindow):
         self.refresh_audio_devices()
 
     def refresh_audio_devices(self) -> None:
+        # 备份当前正在使用的设备ID，以便在刷新后尝试恢复选择
         previous_id = self.current_device_id()
+        # 从媒体设备中获取所有音频输入设备（麦克风）列表
         self.audio_devices = list(self.media_devices.audioInputs())
+        # 提取每个设备的描述名称用于显示
         names = [device.description() for device in self.audio_devices]
 
+        # 如果没有找到任何音频输入设备
         if not self.audio_devices:
+            # 停止当前的音频采集
             self.stop_capture()
+            # 清空设备列表显示
             self.controls.set_devices([], 0)
+            # 设置状态提示用户没有麦克风设备
             self.controls.set_status("No microphone input device was found.")
+            # 更新视图显示空状态
             self.update_views()
             return
 
+        # 获取系统默认音频输入设备的ID
         default_id = bytes(self.media_devices.defaultAudioInput().id())
+        # 初始化当前选中索引为0（第一个设备）
         current_index = 0
+        # 遍历所有设备，寻找应该选中的设备
         for index, device in enumerate(self.audio_devices):
+            # 获取当前遍历设备的ID
             device_id = bytes(device.id())
+            # 如果之前有选中的设备，并且找到了相同的设备，则选中它
             if previous_id and device_id == previous_id:
+                # 之前设备在新列表中的index
                 current_index = index
                 break
+            # 如果之前没有选中设备，则选中系统默认设备
             if not previous_id and device_id == default_id:
+                # 系统默认设备在新列表中的index
                 current_index = index
 
+        # 将设备名称列表和选中索引设置到UI控件(只更新UI没有发出信号)
         self.controls.set_devices(names, current_index)
+        # 重新启动选中的设备进行音频采集(内部根据inde从audio_devices拿设备)
         self.start_selected_device(current_index)
 
     def current_device_id(self) -> bytes | None:
@@ -128,7 +146,9 @@ class AudioMonitor(QMainWindow):
             self.controls.set_status("Selected microphone is not available.")
             return
 
+        # 根据设备支持的格式选择合适的音频:采样率、通道数、采样格式
         self.audio_format = choose_audio_format(device)
+        # 根据音频格式的实际采样率配置缓冲区，reset=True表示强制重置缓冲区
         self.configure_buffers(self.audio_format.sampleRate(), reset=True)
 
         self.audio_source = QAudioSource(device, self.audio_format, self)
@@ -165,6 +185,8 @@ class AudioMonitor(QMainWindow):
 
     def configure_buffers(self, sample_rate: int, reset: bool = False) -> None:
         sample_rate = max(1, sample_rate)
+        # 如果采样率没有变化，并且缓冲区已经初始化，且不需要强制重置，则直接返回
+        # 避免不必要的缓冲区重新分配和初始化操作
         if sample_rate == self.sample_rate and self.buffer.size and not reset:
             return
 
@@ -172,6 +194,9 @@ class AudioMonitor(QMainWindow):
         self.buffer_size = max(FFT_SIZE, int(sample_rate * DISPLAY_SECONDS))
         self.buffer = np.zeros(self.buffer_size, dtype=np.float32)
         self.time_axis = self._make_time_axis()
+        
+        # 初始化频谱图数据：使用DB_FLOOR作为初始值，创建二维数组存储历史频谱数据
+        # 行数为SPECTRUM_HISTORY（时间维度），列数为FFT_SIZE // 2 + 1（频率维度）
         self.spectrogram = np.full(
             (SPECTRUM_HISTORY, FFT_SIZE // 2 + 1),
             DB_FLOOR,
@@ -180,22 +205,28 @@ class AudioMonitor(QMainWindow):
         self.sample_index = 0
 
     def _make_time_axis(self) -> np.ndarray:
+        # 生成时间轴数组，表示缓冲区中每个样本对应的时间点（秒）
+        # 时间范围从 -(buffer_size-1)/sample_rate 到 0，即最近 buffer_size 个样本的时间序列
+        # -2～0，均分为buffer_size份
         samples = np.arange(self.buffer_size, dtype=np.float32)
-        return (samples - self.buffer_size + 1) / self.sample_rate
+        return (samples - (self.buffer_size - 1)) / self.sample_rate
 
     def read_audio_data(self) -> None:
         if self.audio_io is None:
             return
 
         raw = bytes(self.audio_io.readAll())
+        # samples长度和定时器间隔时长有关
         samples = decode_audio(raw, self.audio_format)
         if samples.size:
             self.append_samples(samples)
 
     def append_samples(self, samples: np.ndarray) -> None:
         count = min(samples.size, self.buffer_size)
+        # 往前推count个数据(0.04*48000=1920)
         self.buffer[:-count] = self.buffer[count:]
         self.buffer[-count:] = samples[-count:]
+        # 程序从开始采集到现在，一共接收过多少个采样点,它主要用于导出 CSV
         self.sample_index += samples.size
 
     def update_views(self) -> None:
@@ -207,22 +238,38 @@ class AudioMonitor(QMainWindow):
             self.window_name,
             self.sample_rate,
         )
-
         self.plots.set_frequency_data(frequencies, levels_dbfs, self.sample_rate)
+
+        # 往前推一个
         self.spectrogram[:-1] = self.spectrogram[1:]
         self.spectrogram[-1] = levels_dbfs
         self.plots.set_spectrogram(self.spectrogram, self.sample_rate)
 
-        rms = float(np.sqrt(np.mean(frame * frame)))
+        # 计算当前音频帧的RMS（均方根）值，用于表示音频信号的强度
+        rms = float(np.sqrt(np.mean(frame ** 2)))
+        # 将RMS转换为分贝值，使用DB_FLOOR作为最小值防止log10(0)错误
         level = 20.0 * np.log10(max(rms, 10 ** (DB_FLOOR / 20)))
+        # 更新UI显示当前音频电平
         self.controls.set_level(level)
 
     def latest_fft_frame(self) -> np.ndarray:
+        """获取最新的FFT帧数据用于频谱分析。
+        当缓冲区数据足够时，返回最后FFT_SIZE个样本；
+        当缓冲区数据不足时，返回补零后的FFT_SIZE长度数组。
+        和定时器时间间隔没有绝对关系。  
+        Returns:
+            np.ndarray: 长度为FFT_SIZE的float32数组，包含用于FFT计算的音频样本
+        """
+        # 检查缓冲区大小是否足够进行FFT计算
         if self.buffer_size >= FFT_SIZE:
+            # 如果缓冲区足够大，直接返回最后FFT_SIZE个样本，并确保类型为float32
             return self.buffer[-FFT_SIZE:].astype(np.float32, copy=True)
 
+        # 刚启动如果缓冲区不够大，创建一个全零的FFT帧数组
         frame = np.zeros(FFT_SIZE, dtype=np.float32)
+        # 将缓冲区中的数据填充到帧数组的末尾部分
         frame[-self.buffer_size :] = self.buffer
+        # 返回填充后的帧数组
         return frame
 
     def set_window_name(self, window_name: str) -> None:
