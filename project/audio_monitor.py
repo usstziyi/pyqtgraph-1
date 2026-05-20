@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 
 DISPLAY_SECONDS = 2.0
 FFT_SIZE = 4096
-REFRESH_INTERVAL_MS = 40
+REFRESH_INTERVAL_MS = 40 # ms
 SPECTRUM_HISTORY = 120
 TARGET_SAMPLE_RATE = 48000
 FREQUENCY_VIEW_LIMIT = 8000
@@ -76,16 +76,25 @@ class MonitorControlPanel(QWidget):
 
         layout.addStretch(1)
 
+        # 信号转发 (signal relay)，这是 架构分层 的设计模式
+        # MonitorControlPanel 对外只暴露自己的 device_changed 信号，主窗口不需要关心内部实现细节。
+        # 这种模式类似于 事件冒泡
         self.device_combo.currentIndexChanged.connect(self.device_changed)
         self.window_combo.currentTextChanged.connect(self.window_changed)
 
     def set_devices(self, names: list[str], current_index: int) -> None:
+        # 临时阻断信号 ：在修改下拉框内容之前，先阻止 QComboBox 发出 currentIndexChanged 等信号。
+        # 这避免了在清空/添加条目过程中意外触发事件处理。
         self.device_combo.blockSignals(True)
+        # 清空所有现有条目
         self.device_combo.clear()
+        # 批量添加新设备名称
         self.device_combo.addItems(names)
         if names:
             self.device_combo.setCurrentIndex(current_index)
+        # 恢复信号 ：修改完成后，重新启用信号发射
         self.device_combo.blockSignals(False)
+        # 控制可用性 ：如果设备列表为空，将下拉框禁用（置灰），防止用户在无设备时操作。
         self.device_combo.setEnabled(bool(names))
 
     def set_running(self, running: bool) -> None:
@@ -190,6 +199,10 @@ class AudioMonitor(QMainWindow):
         self.setWindowTitle("PyQtGraph Microphone Monitor")
         self.resize(1280, 760)
 
+        # media_devices 负责发现设备，
+        # audio_devices 保存发现到的麦克风列表，
+        # QAudioSource 用其中某个设备真正开始采集音频。
+        self.media_devices = QMediaDevices(self)
         self.audio_devices: list[QAudioDevice] = []
         self.audio_source: QAudioSource | None = None
         self.audio_io: QtCore.QIODevice | None = None
@@ -199,9 +212,11 @@ class AudioMonitor(QMainWindow):
         self.running = False
         self.sample_index = 0
 
-        self.buffer_size = int(TARGET_SAMPLE_RATE * DISPLAY_SECONDS)
+        self.buffer_size = int(TARGET_SAMPLE_RATE * DISPLAY_SECONDS) # 2s 的数据量
         self.buffer = np.zeros(self.buffer_size, dtype=np.float32)
         self.time_axis = self._make_time_axis()
+        # DB_FLOOR 是频谱显示的最低分贝阈值（-100 dBFS），用于初始化空白频谱图
+        # 将频谱图初始化为 DB_FLOOR 表示所有频率分量初始状态均为静音/无信号
         self.spectrogram = np.full(
             (SPECTRUM_HISTORY, FFT_SIZE // 2 + 1),
             DB_FLOOR,
@@ -217,10 +232,9 @@ class AudioMonitor(QMainWindow):
         layout.addWidget(self.controls, 0)
         layout.addWidget(self.plots, 1)
 
-        self.media_devices = QMediaDevices(self)
         self.media_devices.audioInputsChanged.connect(self.refresh_audio_devices)
-        self.controls.device_changed.connect(self.start_selected_device)
-        self.controls.window_changed.connect(self.set_window_name)
+        self.controls.device_changed.connect(self.start_selected_device) # 信号被转发到这里
+        self.controls.window_changed.connect(self.set_window_name) # 信号被准发到这里
         self.controls.refresh_devices_button.clicked.connect(self.refresh_audio_devices)
         self.controls.pause_button.clicked.connect(self.toggle_running)
         self.controls.clear_button.clicked.connect(self.clear_data)
@@ -278,6 +292,7 @@ class AudioMonitor(QMainWindow):
         self.audio_format = self.choose_audio_format(device)
         self.configure_buffers(self.audio_format.sampleRate(), reset=True)
 
+        # 每次 start_capture 都创建了全新的 QAudioSource 对象
         self.audio_source = QAudioSource(device, self.audio_format, self)
         self.audio_source.stateChanged.connect(self.on_audio_state_changed)
         self.audio_io = self.audio_source.start()
@@ -296,6 +311,8 @@ class AudioMonitor(QMainWindow):
     def stop_capture(self) -> None:
         if self.audio_io is not None:
             try:
+                # 如果旧的 readyRead 信号还没断开，Qt 事件队列里可能还有未处理的 readyRead 事件。
+                # 它再调用 read_audio_data() 时，里面依赖的音频对象可能已经停掉或变成旧对象了。
                 self.audio_io.readyRead.disconnect(self.read_audio_data)
             except (RuntimeError, TypeError):
                 pass
@@ -372,34 +389,44 @@ class AudioMonitor(QMainWindow):
     def read_audio_data(self) -> None:
         if self.audio_io is None:
             return
-
-        raw = bytes(self.audio_io.readAll())
+        
+        # 读音频信号：从麦克风硬件缓冲区中"捞"出原始 PCM 音频字节
+        raw = bytes(self.audio_io.readAll()) 
+        # 将原始 PCM 音频字节解码为 numpy 数组
         samples = self.decode_audio(raw, self.audio_format)
         if samples.size:
             self.append_samples(samples)
 
+    """
+    解码原始PCM音频字节
+    """
     def decode_audio(
         self,
-        raw: bytes,
+        raw: bytes, # 原始PCM音频字节
         audio_format: QAudioFormat,
     ) -> np.ndarray:
+        # 获取音频格式中的采样格式类型（如 Int16、Float 等），用于后续解码处理
         sample_format = audio_format.sampleFormat()
+        # 获取音频通道数（声道数），确保至少为1（防止无效格式返回0）
         channel_count = max(1, audio_format.channelCount())
-
+        # 这段代码是在根据 Qt 给你的音频采样格式，决定怎样把原始二进制音频数据转成 [-1.0, 1.0] 范围内的浮点信号。
+        # 麦克风读出来的 raw 不是直接的 Python 数字，而是一串 bytes。
+        # 你必须先知道每个采样点是什么格式，才能正确解释它。
+        # 16 位有符号整数
         if sample_format == QAudioFormat.SampleFormat.Int16:
             sample_width = np.dtype(np.int16).itemsize
             dtype = np.int16
-            scale = 32768.0
+            scale = 32768.0 # 2^15 
             offset = 0.0
         elif sample_format == QAudioFormat.SampleFormat.Int32:
             sample_width = np.dtype(np.int32).itemsize
             dtype = np.int32
-            scale = 2147483648.0
+            scale = 2147483648.0 # 2^31
             offset = 0.0
         elif sample_format == QAudioFormat.SampleFormat.UInt8:
             sample_width = np.dtype(np.uint8).itemsize
             dtype = np.uint8
-            scale = 128.0
+            scale = 128.0 # 2^7
             offset = -128.0
         elif sample_format == QAudioFormat.SampleFormat.Float:
             sample_width = np.dtype(np.float32).itemsize
@@ -409,19 +436,24 @@ class AudioMonitor(QMainWindow):
         else:
             return np.empty(0, dtype=np.float32)
 
+        # 多声道音频在 raw 里通常是交错排列的，英文叫 interleaved
+        # L0, R0, L1, R1, L2, R2, L3, R3, ...
         frame_width = sample_width * channel_count
+        # 先裁掉尾部不完整数据
         usable_bytes = len(raw) - (len(raw) % frame_width)
         if usable_bytes <= 0:
             return np.empty(0, dtype=np.float32)
 
+        # 把一段二进制 bytes 按指定的数据类型解释成 NumPy 数组
         audio = np.frombuffer(raw[:usable_bytes], dtype=dtype).astype(np.float32)
         if offset:
             audio += offset
-        audio /= scale
+        audio /= scale # 把原始二进制音频数据转成 [-1.0, 1.0] 范围内的浮点信号
 
         if channel_count > 1:
             audio = audio.reshape(-1, channel_count).mean(axis=1)
 
+        # 将解码后的音频采样值 严格限制在 [-1.0, 1.0] 范围内
         return np.clip(audio, -1.0, 1.0)
 
     def append_samples(self, samples: np.ndarray) -> None:
