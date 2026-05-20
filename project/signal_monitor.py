@@ -167,6 +167,9 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
 
         self.spec_bottom_axis = self.spec_plot.getAxis("bottom")
 
+        cmap = pg.colormap.get("plasma")
+        self.spec_image.setLookupTable(cmap.getLookupTable(nPts=256))
+
 
     def set_time_data(self, samples: np.ndarray, values: np.ndarray) -> None:
         """设置时域波形图的数据"""
@@ -204,6 +207,12 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         # setImage 赋予像素和尺寸
         self.spec_image.setImage(spectrogram, autoLevels=True)
 
+        # 设置滚动频谱图颜色映射：plasma = 紫蓝到黄橙
+
+
+
+
+        # 设置辅助x轴刻度
         nyquist = sample_rate / 2
         max_bin = n_bins - 1
 
