@@ -1,0 +1,9 @@
+"""Shared configuration values for the microphone monitor."""
+
+DISPLAY_SECONDS = 2.0
+FFT_SIZE = 4096
+REFRESH_INTERVAL_MS = 40  # ms
+SPECTRUM_HISTORY = 120
+TARGET_SAMPLE_RATE = 48000
+FREQUENCY_VIEW_LIMIT = 8000
+DB_FLOOR = -100.0
