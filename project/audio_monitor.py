@@ -5,7 +5,14 @@ import sys
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6 import QtCore, QtMultimedia
+from PySide6 import QtCore
+from PySide6.QtMultimedia import (
+    QAudio, 
+    QAudioDevice, 
+    QAudioFormat, 
+    QAudioSource, 
+    QMediaDevices
+)
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -183,10 +190,10 @@ class AudioMonitor(QMainWindow):
         self.setWindowTitle("PyQtGraph Microphone Monitor")
         self.resize(1280, 760)
 
-        self.audio_devices: list[QtMultimedia.QAudioDevice] = []
-        self.audio_source: QtMultimedia.QAudioSource | None = None
+        self.audio_devices: list[QAudioDevice] = []
+        self.audio_source: QAudioSource | None = None
         self.audio_io: QtCore.QIODevice | None = None
-        self.audio_format = QtMultimedia.QAudioFormat()
+        self.audio_format = QAudioFormat()
         self.sample_rate = TARGET_SAMPLE_RATE
         self.window_name = "Hann"
         self.running = False
@@ -210,7 +217,7 @@ class AudioMonitor(QMainWindow):
         layout.addWidget(self.controls, 0)
         layout.addWidget(self.plots, 1)
 
-        self.media_devices = QtMultimedia.QMediaDevices(self)
+        self.media_devices = QMediaDevices(self)
         self.media_devices.audioInputsChanged.connect(self.refresh_audio_devices)
         self.controls.device_changed.connect(self.start_selected_device)
         self.controls.window_changed.connect(self.set_window_name)
@@ -261,7 +268,7 @@ class AudioMonitor(QMainWindow):
             return
         self.start_capture(self.audio_devices[index])
 
-    def start_capture(self, device: QtMultimedia.QAudioDevice) -> None:
+    def start_capture(self, device: QAudioDevice) -> None:
         self.stop_capture()
 
         if device.isNull():
@@ -271,7 +278,7 @@ class AudioMonitor(QMainWindow):
         self.audio_format = self.choose_audio_format(device)
         self.configure_buffers(self.audio_format.sampleRate(), reset=True)
 
-        self.audio_source = QtMultimedia.QAudioSource(device, self.audio_format, self)
+        self.audio_source = QAudioSource(device, self.audio_format, self)
         self.audio_source.stateChanged.connect(self.on_audio_state_changed)
         self.audio_io = self.audio_source.start()
 
@@ -304,21 +311,21 @@ class AudioMonitor(QMainWindow):
 
     def choose_audio_format(
         self,
-        device: QtMultimedia.QAudioDevice,
-    ) -> QtMultimedia.QAudioFormat:
+        device: QAudioDevice,
+    ) -> QAudioFormat:
         preferred = device.preferredFormat()
 
-        requested = QtMultimedia.QAudioFormat()
+        requested = QAudioFormat()
         requested.setSampleRate(self.target_sample_rate(device, preferred.sampleRate()))
         requested.setChannelCount(self.target_channel_count(device))
-        requested.setSampleFormat(QtMultimedia.QAudioFormat.SampleFormat.Int16)
+        requested.setSampleFormat(QAudioFormat.SampleFormat.Int16)
         if device.isFormatSupported(requested):
             return requested
 
-        int16_preferred_rate = QtMultimedia.QAudioFormat()
+        int16_preferred_rate = QAudioFormat()
         int16_preferred_rate.setSampleRate(preferred.sampleRate())
         int16_preferred_rate.setChannelCount(preferred.channelCount())
-        int16_preferred_rate.setSampleFormat(QtMultimedia.QAudioFormat.SampleFormat.Int16)
+        int16_preferred_rate.setSampleFormat(QAudioFormat.SampleFormat.Int16)
         if device.isFormatSupported(int16_preferred_rate):
             return int16_preferred_rate
 
@@ -326,7 +333,7 @@ class AudioMonitor(QMainWindow):
 
     def target_sample_rate(
         self,
-        device: QtMultimedia.QAudioDevice,
+        device: QAudioDevice,
         fallback: int,
     ) -> int:
         minimum = device.minimumSampleRate()
@@ -337,7 +344,7 @@ class AudioMonitor(QMainWindow):
             return fallback
         return max(min(TARGET_SAMPLE_RATE, maximum), minimum)
 
-    def target_channel_count(self, device: QtMultimedia.QAudioDevice) -> int:
+    def target_channel_count(self, device: QAudioDevice) -> int:
         if device.minimumChannelCount() <= 1 <= device.maximumChannelCount():
             return 1
         return device.minimumChannelCount()
@@ -374,27 +381,27 @@ class AudioMonitor(QMainWindow):
     def decode_audio(
         self,
         raw: bytes,
-        audio_format: QtMultimedia.QAudioFormat,
+        audio_format: QAudioFormat,
     ) -> np.ndarray:
         sample_format = audio_format.sampleFormat()
         channel_count = max(1, audio_format.channelCount())
 
-        if sample_format == QtMultimedia.QAudioFormat.SampleFormat.Int16:
+        if sample_format == QAudioFormat.SampleFormat.Int16:
             sample_width = np.dtype(np.int16).itemsize
             dtype = np.int16
             scale = 32768.0
             offset = 0.0
-        elif sample_format == QtMultimedia.QAudioFormat.SampleFormat.Int32:
+        elif sample_format == QAudioFormat.SampleFormat.Int32:
             sample_width = np.dtype(np.int32).itemsize
             dtype = np.int32
             scale = 2147483648.0
             offset = 0.0
-        elif sample_format == QtMultimedia.QAudioFormat.SampleFormat.UInt8:
+        elif sample_format == QAudioFormat.SampleFormat.UInt8:
             sample_width = np.dtype(np.uint8).itemsize
             dtype = np.uint8
             scale = 128.0
             offset = -128.0
-        elif sample_format == QtMultimedia.QAudioFormat.SampleFormat.Float:
+        elif sample_format == QAudioFormat.SampleFormat.Float:
             sample_width = np.dtype(np.float32).itemsize
             dtype = np.float32
             scale = 1.0
@@ -476,17 +483,17 @@ class AudioMonitor(QMainWindow):
             self.running = True
         self.controls.set_running(self.running)
 
-    def on_audio_state_changed(self, state: QtMultimedia.QAudio.State) -> None:
+    def on_audio_state_changed(self, state: QAudio.State) -> None:
         if self.audio_source is None:
             return
 
-        if state == QtMultimedia.QAudio.State.SuspendedState:
+        if state == QAudio.State.SuspendedState:
             self.controls.set_status("Microphone capture is paused.")
             return
 
-        if state == QtMultimedia.QAudio.State.StoppedState:
+        if state == QAudio.State.StoppedState:
             error = self.audio_source.error()
-            if error != QtMultimedia.QAudio.Error.NoError:
+            if error != QAudio.Error.NoError:
                 self.controls.set_status(f"Microphone stopped: {error.name}")
 
     def clear_data(self) -> None:
@@ -520,7 +527,7 @@ class AudioMonitor(QMainWindow):
             comments="",
         )
 
-    def format_status(self, device: QtMultimedia.QAudioDevice) -> str:
+    def format_status(self, device: QAudioDevice) -> str:
         sample_format = self.audio_format.sampleFormat().name
         return (
             f"Capturing: {device.description()}\n"
