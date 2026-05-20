@@ -50,13 +50,6 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         cmap = pg.colormap.get("plasma") #plasma #magma
         self.spec_image.setLookupTable(cmap.getLookupTable(nPts=256))
         marker_pen = pg.mkPen("#FFFFFF", width=1, style=pg.QtCore.Qt.PenStyle.DashLine)
-        self.spec_image.setRect(
-                # 把图像映射到：
-                # x: [0 , nyquist]
-                # y: [0 , n_frames]
-                QtCore.QRectF(0, 0, 24000, 120)
-                # QtCore.QRectF(-bin_width / 2, 0, nyquist + bin_width, n_frames)
-        )
         self.spec_marker_lines = {
             # 20: pg.InfiniteLine(pos=20, angle=90, movable=False, pen=marker_pen),
             20000: pg.InfiniteLine(pos=20000, angle=90, movable=False, pen=marker_pen),
