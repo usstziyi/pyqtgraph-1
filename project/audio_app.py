@@ -202,8 +202,11 @@ class AudioMonitor(QMainWindow):
         self.plots.set_time_data(self.time_axis, self.buffer)
 
         frame = self.latest_fft_frame()
-        frequencies, levels_dbfs = spectrum_dbfs(frame, self.window_name)
-        frequencies = frequencies * self.sample_rate
+        frequencies, levels_dbfs = spectrum_dbfs(
+            frame,
+            self.window_name,
+            self.sample_rate,
+        )
 
         self.plots.set_frequency_data(frequencies, levels_dbfs, self.sample_rate)
         self.spectrogram[:-1] = self.spectrogram[1:]

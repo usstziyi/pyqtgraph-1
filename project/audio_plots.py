@@ -20,11 +20,11 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         self.time_plot.setLabel("left", "amplitude")
         self.time_plot.setYRange(-1.0, 1.0, padding=0)
         self.time_plot.showGrid(x=True, y=True, alpha=0.2)
-        self.time_curve = self.time_plot.plot(pen=pg.mkPen("#0072B2", width=1))
+        self.time_curve = self.time_plot.plot(pen=pg.mkPen("#33FF33", width=1))
 
         self.freq_plot = self.addPlot(row=1, col=0, title="Frequency spectrum")
         self.freq_plot.setLabel("bottom", "frequency", units="Hz")
-        self.freq_plot.setLabel("left", "level", units="dBFS")
+        self.freq_plot.setLabel("left", "level", units="dBFS") # decibels relative to full scale 相对于数字音频最大满幅值的分贝 表示：当前数字音频信号离系统能表示的最大幅度还有多远
         self.freq_plot.setYRange(DB_FLOOR, 0, padding=0)
         self.freq_plot.showGrid(x=True, y=True, alpha=0.2)
         self.freq_curve = self.freq_plot.plot(pen=pg.mkPen("#D55E00", width=1))
@@ -44,6 +44,7 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
     def set_time_data(self, times: np.ndarray, values: np.ndarray) -> None:
         self.time_curve.setData(times, values)
         if times.size:
+            # 固定x轴刻度
             self.time_plot.setXRange(float(times[0]), float(times[-1]), padding=0)
 
     def set_frequency_data(

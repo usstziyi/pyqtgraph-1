@@ -5,12 +5,12 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
+# 这段代码是为了让 audio_monitor.py 既能被直接当脚本运行，也能作为 project 包里的模块导入。
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from project.audio_app import AudioMonitor
 else:
     from .audio_app import AudioMonitor
-
 
 def main() -> None:
     app = QApplication.instance() or QApplication(sys.argv)
@@ -19,7 +19,7 @@ def main() -> None:
     window = AudioMonitor()
     window.show()
     app.exec()
-
+    
 
 if __name__ == "__main__":
     main()

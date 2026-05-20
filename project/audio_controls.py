@@ -68,7 +68,9 @@ class MonitorControlPanel(QWidget):
         self.status_label.setText(text)
 
     def set_level(self, dbfs: float) -> None:
+        # 检查 dBFS 值是否为有限数（非 NaN、非无穷大）
         if np.isfinite(dbfs):
             self.level_label.setText(f"Level: {dbfs:.1f} dBFS")
         else:
+            # 对于无效值（如 -inf），显示为负无穷
             self.level_label.setText("Level: -inf dBFS")
