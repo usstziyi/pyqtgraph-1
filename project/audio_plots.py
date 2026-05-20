@@ -50,12 +50,26 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         cmap = pg.colormap.get("plasma") #plasma #magma
         self.spec_image.setLookupTable(cmap.getLookupTable(nPts=256))
         marker_pen = pg.mkPen("#FFFFFF", width=1, style=pg.QtCore.Qt.PenStyle.DashLine)
+        self.spec_image.setRect(
+                # 把图像映射到：
+                # x: [0 , nyquist]
+                # y: [0 , n_frames]
+                QtCore.QRectF(0, 0, 24000, 120)
+                # QtCore.QRectF(-bin_width / 2, 0, nyquist + bin_width, n_frames)
+        )
         self.spec_marker_lines = {
-            20: pg.InfiniteLine(angle=90, movable=False, pen=marker_pen),
-            20000: pg.InfiniteLine(angle=90, movable=False, pen=marker_pen),
+            20: pg.InfiniteLine(pos=20, angle=90, movable=False, pen=marker_pen),
+            20000: pg.InfiniteLine(pos=20000, angle=90, movable=False, pen=marker_pen),
         }
         for line in self.spec_marker_lines.values():
             self.spec_plot.addItem(line)
+        self.spec_marker_labels: dict[int, pg.TextItem] = {}
+        for hz in self.spec_marker_lines:
+            label_text = f"{hz / 1000:.0f}k Hz" if hz >= 1000 else f"{hz} Hz"
+            label = pg.TextItem(text=label_text, color="#FFFFFF", anchor=(0.5, 1))
+            label.setPos(hz, 0)
+            self.spec_plot.addItem(label)
+            self.spec_marker_labels[hz] = label
 
     def set_time_data(self, times: np.ndarray, values: np.ndarray) -> None:
         self.time_curve.setData(times, values)
@@ -93,19 +107,23 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
             )
         
         # 更新频谱图中的频率标记线位置
-        self._set_frequency_markers(sample_rate)
+        # self._set_frequency_markers(sample_rate)
 
     def _set_frequency_markers(self, sample_rate: int) -> None:
-        # 计算奈奎斯特频率（采样率的一半，频谱显示的最大频率）
         nyquist = sample_rate / 2
         if nyquist <= 0:
             for line in self.spec_marker_lines.values():
                 line.hide()
+            for label in self.spec_marker_labels.values():
+                label.hide()
             return
 
         for hz, line in self.spec_marker_lines.items():
             if hz <= nyquist:
+                # 这条竖线就画在频谱图的 20 Hz 处
                 line.setValue(hz)
                 line.show()
+                self.spec_marker_labels[hz].show()
             else:
                 line.hide()
+                self.spec_marker_labels[hz].hide()
