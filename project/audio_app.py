@@ -281,6 +281,8 @@ class AudioMonitor(QMainWindow):
 
         if self.running:
             self.audio_source.suspend()
+            # 数据流断了 — 音频源被挂起后， readyRead 信号不再发射
+            # 所以 read_audio_data 不再被调用， append_samples 不再往缓冲区写入新数据。
             self.running = False
         else:
             self.audio_source.resume()
