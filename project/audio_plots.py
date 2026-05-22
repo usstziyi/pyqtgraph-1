@@ -71,6 +71,13 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
             padding=0,
         )
 
+
+    """
+    plot = win.addPlot()
+    image = pg.ImageItem()
+    plot.addItem(image)
+    image.setImage(img_data)
+    """
     def set_spectrogram(self, spectrogram: np.ndarray, sample_rate: int) -> None:
         n_frames, n_bins = spectrogram.shape
         nyquist = sample_rate / 2
