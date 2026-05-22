@@ -44,25 +44,13 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         self.spec_plot.getAxis("left").autoSIPrefix = False
         self.spec_bottom_axis = self.spec_plot.getAxis("bottom")
         # self.spec_plot.invertY(True) # 翻转Y轴
-
         self.spec_image = pg.ImageItem(data=None, axisOrder="row-major")
-        self.spec_plot.addItem(self.spec_image)
         cmap = pg.colormap.get("plasma") #plasma #magma
         self.spec_image.setLookupTable(cmap.getLookupTable(nPts=256))
-        marker_pen = pg.mkPen("#FFFFFF", width=1, style=pg.QtCore.Qt.PenStyle.DashLine)
-        self.spec_marker_lines = {
-            # 20: pg.InfiniteLine(pos=20, angle=90, movable=False, pen=marker_pen),
-            20000: pg.InfiniteLine(pos=20000, angle=90, movable=False, pen=marker_pen),
-        }
-        for line in self.spec_marker_lines.values():
-            self.spec_plot.addItem(line)
-        self.spec_marker_labels: dict[int, pg.TextItem] = {}
-        for hz in self.spec_marker_lines:
-            label_text = f"{hz / 1000:.0f}k Hz" if hz >= 1000 else f"{hz} Hz"
-            label = pg.TextItem(text=label_text, color="#FFFFFF", anchor=(0, 0))
-            label.setPos(hz, 120)
-            self.spec_plot.addItem(label)
-            self.spec_marker_labels[hz] = label
+        self.spec_plot.addItem(self.spec_image)
+        # 添加标记线
+        self.spec_plot.addLine(x=10000, pen=pg.mkPen('w', width=2, style=pg.QtCore.Qt.PenStyle.DotLine),
+                               movable=True, label='{value:0.2f}Hz',labelOpts={'position': 0.5})
 
     def set_time_data(self, times: np.ndarray, values: np.ndarray) -> None:
         self.time_curve.setData(times, values)
@@ -98,25 +86,5 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
                 QtCore.QRectF(0, 0, nyquist, n_frames)
                 # QtCore.QRectF(-bin_width / 2, 0, nyquist + bin_width, n_frames)
             )
-        
-        # 更新频谱图中的频率标记线位置
-        # self._set_frequency_markers(sample_rate)
 
-    def _set_frequency_markers(self, sample_rate: int) -> None:
-        nyquist = sample_rate / 2
-        if nyquist <= 0:
-            for line in self.spec_marker_lines.values():
-                line.hide()
-            for label in self.spec_marker_labels.values():
-                label.hide()
-            return
 
-        for hz, line in self.spec_marker_lines.items():
-            if hz <= nyquist:
-                # 这条竖线就画在频谱图的 20 Hz 处
-                line.setValue(hz)
-                line.show()
-                self.spec_marker_labels[hz].show()
-            else:
-                line.hide()
-                self.spec_marker_labels[hz].hide()
