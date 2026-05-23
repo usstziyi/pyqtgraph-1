@@ -53,6 +53,7 @@ class AudioMonitor(QMainWindow):
         self.running = False
         self.sample_index = 0
 
+        # buffer可以装下整个X轴range内需要的总点数
         self.buffer_size = int(TARGET_SAMPLE_RATE * DISPLAY_SECONDS)
         self.buffer = np.zeros(self.buffer_size, dtype=np.float32)
         self.time_axis = self._make_time_axis()
@@ -230,6 +231,8 @@ class AudioMonitor(QMainWindow):
         self.sample_index += samples.size
 
     def update_views(self) -> None:
+        # buffer由QAudioSource(Qt 底层线程采集)控制
+        # 主线程只负责显示这个buffer
         self.plots.set_time_data(self.time_axis, self.buffer)
 
         frame = self.latest_fft_frame()
