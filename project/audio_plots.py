@@ -28,6 +28,10 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
         self.time_plot.setYRange(-1.0, 1.0, padding=0)
         self.time_plot.showGrid(x=True, y=True, alpha=0.2)
         self.time_curve = self.time_plot.plot(pen=pg.mkPen("#33FF33", width=1))
+        # 降采样作用在整个 PlotItem 上：影响这个 plot 管理的所有曲线
+        # self.time_plot.setDownsampling(auto=True, mode="peak")
+        # 降采样作用在具体某一条曲线上：只影响 self.time_curve
+        self.time_curve.setDownsampling(auto=True, method="peak")
 
         self.freq_plot = self.addPlot(row=1, col=0, title="Frequency spectrum")
         self.freq_plot.setLabel("bottom", "frequency", units="Hz")
