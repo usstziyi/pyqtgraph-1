@@ -222,6 +222,10 @@ class AudioMonitor(QMainWindow):
         if samples.size:
             self.append_samples(samples)
 
+    # NumPy 的 buffer[:-count] = buffer[count:] 
+    # 底层是一次 C 语言的 memmove ，是 O(1) 级别的内存块移动，与 count 大小几乎无关。
+    # 而 deque 的每个元素是分散在多个内存块中的 Python 对象，
+    # 移位只能靠逐个 append/pop，每次都是 Python 级别的操作。
     def append_samples(self, samples: np.ndarray) -> None:
         count = min(samples.size, self.buffer_size)
         # 往前推count个数据(0.04*48000=1920)
