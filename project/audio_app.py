@@ -260,10 +260,11 @@ class AudioMonitor(QMainWindow):
         self.controls.set_level(level)
 
     def latest_fft_frame(self) -> np.ndarray:
-        """获取最新的FFT帧数据用于频谱分析。
+        """
+        获取最新的FFT帧数据用于频谱分析。
         当缓冲区数据足够时，返回最后FFT_SIZE个样本；
         当缓冲区数据不足时，返回补零后的FFT_SIZE长度数组。
-        和定时器时间间隔没有绝对关系。  
+        和定时器时间间隔没有绝对关系。
         Returns:
             np.ndarray: 长度为FFT_SIZE的float32数组，包含用于FFT计算的音频样本
         """
