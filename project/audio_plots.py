@@ -94,8 +94,8 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
                 # 把图像映射到：
                 # x: [0 , nyquist]
                 # y: [0 , n_frames]
-                QtCore.QRectF(0, 0, nyquist, n_frames)
-                # QtCore.QRectF(-bin_width / 2, 0, nyquist + bin_width, n_frames)
+                QtCore.QRectF(0, 0, nyquist, n_frames) # 粗略映射
+                # QtCore.QRectF(-bin_width / 2, 0, nyquist + bin_width, n_frames) # 精确映射
             )
 
 
