@@ -98,4 +98,12 @@ class MonitorPlots(pg.GraphicsLayoutWidget):
                 # QtCore.QRectF(-bin_width / 2, 0, nyquist + bin_width, n_frames) # 精确映射
             )
 
+        #  两步合一步的结果是一致的
+        # self.spec_image.setImage(
+        #     spectrogram,
+        #     levels=(DB_FLOOR, 0),
+        #     autoLevels=False,
+        #     rect=QtCore.QRectF(0, 0, nyquist, n_frames),
+        # )
+
 
